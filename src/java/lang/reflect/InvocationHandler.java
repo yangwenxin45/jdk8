@@ -28,15 +28,18 @@ package java.lang.reflect;
 /**
  * {@code InvocationHandler} is the interface implemented by
  * the <i>invocation handler</i> of a proxy instance.
+ * 代理实例必须实现InvocationHandler接口
  *
  * <p>Each proxy instance has an associated invocation handler.
  * When a method is invoked on a proxy instance, the method
  * invocation is encoded and dispatched to the {@code invoke}
  * method of its invocation handler.
+ * 每一个代理实例都有一个关联的调用处理程序
+ * 当代理实例调用方法时，方法调用被编码分派到调用处理程序的invoke方法
  *
- * @author      Peter Jones
- * @see         Proxy
- * @since       1.3
+ * @author Peter Jones
+ * @see Proxy
+ * @since 1.3
  */
 public interface InvocationHandler {
 
@@ -45,14 +48,18 @@ public interface InvocationHandler {
      * the result.  This method will be invoked on an invocation handler
      * when a method is invoked on a proxy instance that it is
      * associated with.
+     * 处理代理实例上的方法调用并返回结果
+     * 当一个与调用处理程序相关联的方法被代理实例调用时，这个方法将被调用处理程序调用
      *
      * @param   proxy the proxy instance that the method was invoked on
+     *                调用该方法的代理实例
      *
      * @param   method the {@code Method} instance corresponding to
      * the interface method invoked on the proxy instance.  The declaring
      * class of the {@code Method} object will be the interface that
      * the method was declared in, which may be a superinterface of the
      * proxy interface that the proxy class inherits the method through.
+     *                 这个方法实例对应于代理实例上的接口方法调用，Method对象的声明类将是声明该方法的接口
      *
      * @param   args an array of objects containing the values of the
      * arguments passed in the method invocation on the proxy instance,
@@ -61,7 +68,7 @@ public interface InvocationHandler {
      * appropriate primitive wrapper class, such as
      * {@code java.lang.Integer} or {@code java.lang.Boolean}.
      *
-     * @return  the value to return from the method invocation on the
+     * @return the value to return from the method invocation on the
      * proxy instance.  If the declared return type of the interface
      * method is a primitive type, then the value returned by
      * this method must be an instance of the corresponding primitive

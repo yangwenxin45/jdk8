@@ -780,18 +780,22 @@ public final class Integer extends Number implements Comparable<Integer> {
     private static class IntegerCache {
         static final int low = -128;
         static final int high;
+        // 缓存池
         static final Integer cache[];
 
         static {
             // high value may be configured by property
             int h = 127;
+            // 通过-XX:AutoBoxCacheMax=<size>设置
             String integerCacheHighPropValue =
                 sun.misc.VM.getSavedProperty("java.lang.Integer.IntegerCache.high");
             if (integerCacheHighPropValue != null) {
                 try {
                     int i = parseInt(integerCacheHighPropValue);
+                    // 设置的值如果小于127不会生效
                     i = Math.max(i, 127);
                     // Maximum array size is Integer.MAX_VALUE
+                    // 设置的值不能超过Integer.MAX_VALUE-129
                     h = Math.min(i, Integer.MAX_VALUE - (-low) -1);
                 } catch( NumberFormatException nfe) {
                     // If the property cannot be parsed into an int, ignore it.
@@ -801,6 +805,7 @@ public final class Integer extends Number implements Comparable<Integer> {
 
             cache = new Integer[(high - low) + 1];
             int j = low;
+            // 缓存设置范围内的Integer对象
             for(int k = 0; k < cache.length; k++)
                 cache[k] = new Integer(j++);
 
@@ -827,6 +832,7 @@ public final class Integer extends Number implements Comparable<Integer> {
      * @since  1.5
      */
     public static Integer valueOf(int i) {
+        // 查询缓存中是否存在，存在则直接取出
         if (i >= IntegerCache.low && i <= IntegerCache.high)
             return IntegerCache.cache[i + (-IntegerCache.low)];
         return new Integer(i);

@@ -24,10 +24,11 @@
  */
 
 package java.lang;
-import java.util.Random;
 
-import sun.misc.FloatConsts;
 import sun.misc.DoubleConsts;
+import sun.misc.FloatConsts;
+
+import java.util.Random;
 
 /**
  * The class {@code Math} contains methods for performing basic
@@ -769,6 +770,7 @@ public final class Math {
      * to {@code 0.0} and less than {@code 1.0}.
      * @see Random#nextDouble()
      */
+    // 生成一个范围为[0,1)的double值
     public static double random() {
         return RandomNumberGeneratorHolder.randomNumberGenerator.nextDouble();
     }

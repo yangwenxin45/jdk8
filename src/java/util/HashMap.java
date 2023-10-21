@@ -25,6 +25,8 @@
 
 package java.util;
 
+import sun.misc.SharedSecrets;
+
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.Serializable;
@@ -34,7 +36,6 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import sun.misc.SharedSecrets;
 
 /**
  * Hash table based implementation of the <tt>Map</tt> interface.  This
@@ -334,6 +335,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * to incorporate impact of the highest bits that would otherwise
      * never be used in index calculations because of table bounds.
      */
+    // 根据key来计算hash值
     static final int hash(Object key) {
         int h;
         return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
@@ -375,6 +377,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /**
      * Returns a power of two size for the given target capacity.
      */
+    // 计算出第一个大于该数的2的幂
     static final int tableSizeFor(int cap) {
         int n = cap - 1;
         n |= n >>> 1;
@@ -565,22 +568,37 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @return the node, or null if none
      */
     final Node<K,V> getNode(int hash, Object key) {
-        Node<K,V>[] tab; Node<K,V> first, e; int n; K k;
+        // 当前 HashMap 的散列表的引用
+        Node<K, V>[] tab;
+        // first：桶头元素
+        // e：用于存放临时元素
+        Node<K, V> first, e;
+        // n：table数组的长度
+        int n;
+        // 元素的 key
+        K k;
+        // table 中有数据，同时将该位置的元素赋值为 first
         if ((tab = table) != null && (n = tab.length) > 0 &&
-            (first = tab[(n - 1) & hash]) != null) {
+                (first = tab[(n - 1) & hash]) != null) {
+            // 定位到的桶的位置的元素就是想要获取的 key 对应的元素，直接返回该元素
             if (first.hash == hash && // always check first node
-                ((k = first.key) == key || (key != null && key.equals(k))))
+                    ((k = first.key) == key || (key != null && key.equals(k))))
                 return first;
+            // 到这一步说明定位到的元素不是想要的，且该位置不仅仅有一个元素，需要判断是链表还是树
             if ((e = first.next) != null) {
+                // 是否已经树化
                 if (first instanceof TreeNode)
                     return ((TreeNode<K,V>)first).getTreeNode(hash, key);
+                // 处理链表的情况
                 do {
+                    // 如果遍历到了就直接返回该元素
                     if (e.hash == hash &&
                         ((k = e.key) == key || (key != null && key.equals(k))))
                         return e;
                 } while ((e = e.next) != null);
             }
         }
+        // 遍历不到返回 null
         return null;
     }
 
@@ -624,44 +642,76 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
-        Node<K,V>[] tab; Node<K,V> p; int n, i;
+        // tab表示当前hash散列表的引用
+        Node<K, V>[] tab;
+        // 表示具体的散列表中的元素
+        Node<K, V> p;
+        // n：表示散列表数组的长度
+        // i：表示路由寻址的结果
+        int n, i;
+        /**
+         * 将table赋值发给tab；如果tab==null，说明table还没有被初始化。则此时是需要去创建table的
+         * 为什么这个时候才去创建散列表？
+         * 因为可能创建了HashMap时候可能并没有存放数据，如果在初始化HashMap的时候就创建散列表，势必会造成空间的浪费
+         * 这也就是延迟初始化的逻辑
+         */
         if ((tab = table) == null || (n = tab.length) == 0)
             n = (tab = resize()).length;
+        // 如果p == null，说明寻址到的桶的位置没有元素。那么将key-value封装到Node中，并放到寻址到的下标为i的位置
         if ((p = tab[i = (n - 1) & hash]) == null)
             tab[i] = newNode(hash, key, value, null);
+            // 到这里说明该位置已经有数据了，且此时可能是链表结构，也可能是树结构
         else {
-            Node<K,V> e; K k;
+            // e表示找到了一个与当前要插入的key value一致的元素
+            Node<K, V> e;
+            // 临时的key
+            K k;
+            // p 是原来的已经在 i 位置的元素，且新插入的 key 是等于 p 中的 key
             if (p.hash == hash &&
-                ((k = p.key) == key || (key != null && key.equals(k))))
+                    ((k = p.key) == key || (key != null && key.equals(k))))
+                // 将 p 的值赋值给 e
                 e = p;
+                // 说明已经树化
             else if (p instanceof TreeNode)
-                e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
+                e = ((TreeNode<K, V>) p).putTreeVal(this, tab, hash, key, value);
             else {
+                // 到这里说明不是树结构，也不相等，那说明不是同一个元素，就是链表了
                 for (int binCount = 0; ; ++binCount) {
+                    // 如果 p.next == null 说明 p 是最后一个元素，说明该元素在链表中也没有重复的，那么就需要添加到链表的尾部
                     if ((e = p.next) == null) {
+                        // 直接将 key-value 封装到 Node 中并且添加到 p 的后面
                         p.next = newNode(hash, key, value, null);
+                        // 当元素已经是 7 了，再来一个就是 8 个了，那么就需要进行树化
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
                             treeifyBin(tab, hash);
                         break;
                     }
+                    // 在链表中找到了某个和当前元素一样的元素，即需要做替换操作了
                     if (e.hash == hash &&
                         ((k = e.key) == key || (key != null && key.equals(k))))
                         break;
+                    // 将 e 赋值给 p，就是为了继续遍历链表的下一个元素
                     p = e;
                 }
             }
+            // 找到了要替换的数据
             if (e != null) { // existing mapping for key
+                // 使用新值赋值为旧值
                 V oldValue = e.value;
                 if (!onlyIfAbsent || oldValue == null)
                     e.value = value;
                 afterNodeAccess(e);
+                // 返回旧值
                 return oldValue;
             }
         }
+        // 对于散列表的结构修改次数，那么就修改 modCount 的次数
         ++modCount;
+        // size 即散列表中的元素的个数，添加后需要自责个，如果自增后的值大于扩容后的阈值，那么就触发扩容操作
         if (++size > threshold)
             resize();
         afterNodeInsertion(evict);
+        // 原来位置没有值，就返回 null
         return null;
     }
 
@@ -812,42 +862,69 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     final Node<K,V> removeNode(int hash, Object key, Object value,
                                boolean matchValue, boolean movable) {
-        Node<K,V>[] tab; Node<K,V> p; int n, index;
+        // 当前 HashMap 的散列表的引用
+        Node<K, V>[] tab;
+        // p：表示当前的Node元素
+        Node<K, V> p;
+        // n：table的长度
+        // index：桶的下标位置
+        int n, index;
+        // table 不为空，将定位到的桶位的元素赋值给 p，并判断定位到元素不为空
         if ((tab = table) != null && (n = tab.length) > 0 &&
-            (p = tab[index = (n - 1) & hash]) != null) {
-            Node<K,V> node = null, e; K k; V v;
+                (p = tab[index = (n - 1) & hash]) != null) {
+            // 已经定位到元素了
+            // node：保存查找到的结果
+            // e：表示当前元素的下一个元素
+            Node<K, V> node = null, e;
+            K k;
+            V v;
+            // 当前元素就是要找的结果
             if (p.hash == hash &&
-                ((k = p.key) == key || (key != null && key.equals(k))))
+                    ((k = p.key) == key || (key != null && key.equals(k))))
                 node = p;
             else if ((e = p.next) != null) {
+                // 树
                 if (p instanceof TreeNode)
-                    node = ((TreeNode<K,V>)p).getTreeNode(hash, key);
+                    node = ((TreeNode<K, V>) p).getTreeNode(hash, key);
+                    // 处理链表的情况
                 else {
                     do {
+                        // 如果条件成立，说明已经匹配到了元素，直接将匹配到的元素赋值给 node，并跳出循环
                         if (e.hash == hash &&
-                            ((k = e.key) == key ||
-                             (key != null && key.equals(k)))) {
+                                ((k = e.key) == key ||
+                                        (key != null && key.equals(k)))) {
                             node = e;
                             break;
                         }
+                        // 匹配节点的前一个节点
                         p = e;
                     } while ((e = e.next) != null);
                 }
             }
+            // 匹配到了元素
+            // matchValue为false表示不需要值匹配
             if (node != null && (!matchValue || (v = node.value) == value ||
-                                 (value != null && value.equals(v)))) {
+                    (value != null && value.equals(v)))) {
+                // 树
                 if (node instanceof TreeNode)
-                    ((TreeNode<K,V>)node).removeTreeNode(this, tab, movable);
+                    ((TreeNode<K, V>) node).removeTreeNode(this, tab, movable);
+                    // 最简单的情况
                 else if (node == p)
+                    // 直接将当前节点的下一个节点放到当前的桶位置
                     tab[index] = node.next;
                 else
+                    // 链表，并且定位到的元素不是该桶位置的头元素
                     p.next = node.next;
+                // 移除和添加都属于结构的修改，需要同步自增 modCount 的值
                 ++modCount;
+                // table 中的元素个数减 1
                 --size;
                 afterNodeRemoval(node);
+                // 返回被移除的节点元素
                 return node;
             }
         }
+        // 没有匹配到返回 null 即可
         return null;
     }
 
@@ -1062,6 +1139,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         return putVal(hash(key), key, value, true, true);
     }
 
+    // key和value都需要匹配上才移除
     @Override
     public boolean remove(Object key, Object value) {
         return removeNode(hash(key), key, value, true, true) != null;

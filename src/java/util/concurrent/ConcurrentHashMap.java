@@ -39,37 +39,11 @@ import java.io.ObjectStreamField;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.Spliterator;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ForkJoinPool;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
-import java.util.function.Consumer;
-import java.util.function.DoubleBinaryOperator;
-import java.util.function.Function;
-import java.util.function.IntBinaryOperator;
-import java.util.function.LongBinaryOperator;
-import java.util.function.ToDoubleBiFunction;
-import java.util.function.ToDoubleFunction;
-import java.util.function.ToIntBiFunction;
-import java.util.function.ToIntFunction;
-import java.util.function.ToLongBiFunction;
-import java.util.function.ToLongFunction;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 /**
@@ -1006,33 +980,49 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
         return putVal(key, value, false);
     }
 
-    /** Implementation for put and putIfAbsent */
+    /**
+     * 如果某个段为空，那么使用CAS操作来添加新节点；
+     * 如果某个段中的第一个节点的hash值为MOVED，表示当前段正在进行扩容操作，那么就调用helpTransfer方法来协助扩容；
+     * 否则，使用Synchronized锁住当前节点，然后进行节点的添加操作
+     */
+    /**
+     * Implementation for put and putIfAbsent
+     */
     final V putVal(K key, V value, boolean onlyIfAbsent) {
         if (key == null || value == null) throw new NullPointerException();
+        // 对key的hashCode进行扰动计算
         int hash = spread(key.hashCode());
         int binCount = 0;
-        for (Node<K,V>[] tab = table;;) {
-            Node<K,V> f; int n, i, fh;
+        // 循环操作
+        for (Node<K, V>[] tab = table; ; ) {
+            Node<K, V> f;
+            int n, i, fh;
+            // 如果 table 为 null 或长度为 0，则进行初始化
             if (tab == null || (n = tab.length) == 0)
                 tab = initTable();
+                // 如果哈希槽为空，则通过 CAS 操作尝试插入新节点
             else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
                 if (casTabAt(tab, i, null,
                              new Node<K,V>(hash, key, value, null)))
                     break;                   // no lock when adding to empty bin
             }
+            // 如果哈希槽处已经有节点，且 hash 值为 MOVED，则说明正在进行扩容，需要帮助迁移数据
             else if ((fh = f.hash) == MOVED)
                 tab = helpTransfer(tab, f);
+                // 如果哈希槽处已经有节点，且 hash 值不为 MOVED，则进行链表/红黑树的节点遍历或插入操作
             else {
                 V oldVal = null;
+                // 加锁，确保只有一个线程操作该节点的链表/红黑树
                 synchronized (f) {
                     if (tabAt(tab, i) == f) {
                         if (fh >= 0) {
+                            // 遍历链表，找到相同 key 的节点，更新值或插入新节点
                             binCount = 1;
                             for (Node<K,V> e = f;; ++binCount) {
                                 K ek;
                                 if (e.hash == hash &&
-                                    ((ek = e.key) == key ||
-                                     (ek != null && key.equals(ek)))) {
+                                        ((ek = e.key) == key ||
+                                                (ek != null && key.equals(ek)))) {
                                     oldVal = e.val;
                                     if (!onlyIfAbsent)
                                         e.val = value;
@@ -1040,12 +1030,14 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                                 }
                                 Node<K,V> pred = e;
                                 if ((e = e.next) == null) {
+                                    // 将新节点插入到链表末尾
                                     pred.next = new Node<K,V>(hash, key,
-                                                              value, null);
+                                            value, null);
                                     break;
                                 }
                             }
                         }
+                        // 遍历红黑树，找到相同 key 的节点，更新值或插入新节点
                         else if (f instanceof TreeBin) {
                             Node<K,V> p;
                             binCount = 2;
@@ -1058,9 +1050,11 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                         }
                     }
                 }
+                // 如果插入或更新成功，则进行可能的红黑树转化操作
                 if (binCount != 0) {
                     if (binCount >= TREEIFY_THRESHOLD)
                         treeifyBin(tab, i);
+                    // 如果替换旧值成功，则返回旧值
                     if (oldVal != null)
                         return oldVal;
                     break;

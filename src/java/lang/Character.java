@@ -26,9 +26,9 @@
 package java.lang;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * The {@code Character} class wraps a value of the primitive
@@ -5434,6 +5434,7 @@ class Character implements java.io.Serializable, Comparable<Character> {
      * @see     Character#toLowerCase(char)
      * @see     Character#getType(char)
      */
+    // 检测相关字符是否为小写字符
     public static boolean isLowerCase(char ch) {
         return isLowerCase((int)ch);
     }

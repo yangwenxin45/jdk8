@@ -25,9 +25,6 @@
 
 package java.io;
 
-import java.io.ObjectOutput;
-import java.io.ObjectInput;
-
 /**
  * Only the identity of the class of an Externalizable instance is
  * written in the serialization stream and it is the responsibility
@@ -63,6 +60,7 @@ import java.io.ObjectInput;
  * @see java.io.Serializable
  * @since   JDK1.1
  */
+// Externalizable接口实现序列化和反序列化则支持自定义序列化和反序列化的方法
 public interface Externalizable extends java.io.Serializable {
     /**
      * The object implements the writeExternal method to save its contents
@@ -79,6 +77,8 @@ public interface Externalizable extends java.io.Serializable {
      * @param out the stream to write the object to
      * @exception IOException Includes any I/O exceptions that may occur
      */
+    // 该方法在目标对象序列化时调用（序列化到文件中）
+    // 方法中可以调用DataOutput（ObjectOutput的父类）方法来保存其基本值，或调用ObjectOutput的writeObject方法来保存对象、字符串和数组
     void writeExternal(ObjectOutput out) throws IOException;
 
     /**
@@ -93,5 +93,8 @@ public interface Externalizable extends java.io.Serializable {
      * @exception ClassNotFoundException If the class for an object being
      *              restored cannot be found.
      */
+    // 该方法在目标对象反序列化时调用（反序列化文件中的内容）
+    // 方法中调用DataInput（ObjectInput的父类来恢复基础类型），或调用ObjectInput的readObject方法来恢复对象、字符串和数组
+    // readExternal方法读取数据时，必须与writeExternal方法写入数据时的顺序和类型一致
     void readExternal(ObjectInput in) throws IOException, ClassNotFoundException;
 }

@@ -24,7 +24,8 @@
  */
 
 package java.lang;
-import java.lang.ref.*;
+
+import java.lang.ref.WeakReference;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -123,6 +124,7 @@ public class ThreadLocal<T> {
      *
      * @return the initial value for this thread-local
      */
+    // 返回此线程局部变量的初始值
     protected T initialValue() {
         return null;
     }
@@ -156,6 +158,7 @@ public class ThreadLocal<T> {
      *
      * @return the current thread's value of this thread-local
      */
+    // 返回此线程局部变量的当前线程副本中的值。如果这是线程第一次调用该方法，则创建并初始化此副本
     public T get() {
         Thread t = Thread.currentThread();
         ThreadLocalMap map = getMap(t);
@@ -194,8 +197,10 @@ public class ThreadLocal<T> {
      * method to set the values of thread-locals.
      *
      * @param value the value to be stored in the current thread's copy of
-     *        this thread-local.
+     *              this thread-local.
      */
+    // 将此线程局部变量的当前线程副本中的值设置为指定值
+    // 许多应用程序不需要这项功能，它们只依赖于initialValue()方法来设置线程局部变量的值
     public void set(T value) {
         Thread t = Thread.currentThread();
         ThreadLocalMap map = getMap(t);
@@ -216,6 +221,7 @@ public class ThreadLocal<T> {
      *
      * @since 1.5
      */
+    // 移除此线程局部变量的值
      public void remove() {
          ThreadLocalMap m = getMap(Thread.currentThread());
          if (m != null)
@@ -295,6 +301,7 @@ public class ThreadLocal<T> {
      * used, stale entries are guaranteed to be removed only when
      * the table starts running out of space.
      */
+    // ThreadLocal中用于保存线程的独有变量的数据结构，也是k-v结构。key就是当前的ThreadLocal对象，而value就是我们想要保存的值
     static class ThreadLocalMap {
 
         /**
@@ -318,22 +325,26 @@ public class ThreadLocal<T> {
         /**
          * The initial capacity -- MUST be a power of two.
          */
+        // 默认的数组初始化容量
         private static final int INITIAL_CAPACITY = 16;
 
         /**
          * The table, resized as necessary.
          * table.length MUST always be a power of two.
          */
+        // Entry数组，大小必须为2的幂
         private Entry[] table;
 
         /**
          * The number of entries in the table.
          */
+        // 数组内部元素个数
         private int size = 0;
 
         /**
          * The next size value at which to resize.
          */
+        // 数组扩容阈值，默认为0，创建了ThreadLocalMap对象后会被重新设置
         private int threshold; // Default to 0
 
         /**
@@ -363,10 +374,14 @@ public class ThreadLocal<T> {
          * one when we have at least one entry to put in it.
          */
         ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
+            // 初始化 Entry 数组，大小为 16
             table = new Entry[INITIAL_CAPACITY];
+            // 用第一个键的哈希值对初始化大小取模得到索引，和HashMap的位运算代替取模原理一致
             int i = firstKey.threadLocalHashCode & (INITIAL_CAPACITY - 1);
+            // 将Entry对象放入数组指定位置
             table[i] = new Entry(firstKey, firstValue);
             size = 1;
+            // 初始化扩容阈值，第一次设置为10
             setThreshold(INITIAL_CAPACITY);
         }
 
