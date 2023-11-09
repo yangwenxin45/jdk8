@@ -37,33 +37,48 @@ public abstract class TimerTask implements Runnable {
     /**
      * This object is used to control access to the TimerTask internals.
      */
+    // 用于加锁控制多线程修改TImerTask内部状态
     final Object lock = new Object();
 
     /**
      * The state of this task, chosen from the constants below.
      */
+    /**
+     * 当一个 TimerTask 对象创建后，其初始状态为VIRGIN
+     * 当调用 Timer 的 schedule 方法调度了此 TimerTask 对象后，其状态变更为 SCHEDULED
+     * 如果 TimerTask 是一次性任务，此任务执行后，状态变更为 EXECUTED，可重复执行任务执行后状态不变
+     * 当中途调用了TimerTask.cancel 方法，该任务的状态将变为 CANCELLED
+     *
+     * @author yangwenxin
+     * @date 2023-11-09 09:32
+     */
+    // 任务状态
     int state = VIRGIN;
 
     /**
      * This task has not yet been scheduled.
      */
+    // 未调度状态
     static final int VIRGIN = 0;
 
     /**
      * This task is scheduled for execution.  If it is a non-repeating task,
      * it has not yet been executed.
      */
+    // 任务已调度，但未执行
     static final int SCHEDULED   = 1;
 
     /**
      * This non-repeating task has already executed (or is currently
      * executing) and has not been cancelled.
      */
+    // 若是一次性任务表示已执行；可重复执行任务，该状态无效
     static final int EXECUTED    = 2;
 
     /**
      * This task has been cancelled (with a call to TimerTask.cancel).
      */
+    // 任务被取消
     static final int CANCELLED   = 3;
 
     /**
@@ -71,6 +86,7 @@ public abstract class TimerTask implements Runnable {
      * System.currentTimeMillis, assuming this task is scheduled for execution.
      * For repeating tasks, this field is updated prior to each task execution.
      */
+    // 任务的下一次执行时间点
     long nextExecutionTime;
 
     /**
@@ -78,6 +94,7 @@ public abstract class TimerTask implements Runnable {
      * fixed-rate execution.  A negative value indicates fixed-delay execution.
      * A value of 0 indicates a non-repeating task.
      */
+    // 任务执行的时间间隔，正数表示固定速率；负数表示固定时延；0 表示只执行一次
     long period = 0;
 
     /**
@@ -113,6 +130,7 @@ public abstract class TimerTask implements Runnable {
      *         returns <tt>true</tt> if it prevents one or more scheduled
      *         executions from taking place.)
      */
+    // 取消任务
     public boolean cancel() {
         synchronized(lock) {
             boolean result = (state == SCHEDULED);
@@ -149,6 +167,7 @@ public abstract class TimerTask implements Runnable {
      *         its first execution.
      * @see Date#getTime()
      */
+    // 计算下次执行时间点
     public long scheduledExecutionTime() {
         synchronized(lock) {
             return (period < 0 ? nextExecutionTime + period
