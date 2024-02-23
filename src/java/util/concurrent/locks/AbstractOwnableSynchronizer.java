@@ -47,6 +47,7 @@ package java.util.concurrent.locks;
  * @since 1.6
  * @author Doug Lea
  */
+// 记录哪个线程占用锁
 public abstract class AbstractOwnableSynchronizer
     implements java.io.Serializable {
 
@@ -70,6 +71,7 @@ public abstract class AbstractOwnableSynchronizer
      * {@code volatile} field accesses.
      * @param thread the owner thread
      */
+    // 设置占用锁的线程
     protected final void setExclusiveOwnerThread(Thread thread) {
         exclusiveOwnerThread = thread;
     }
